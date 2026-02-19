@@ -48,5 +48,8 @@ jobs:
       - name: Run tests
         run: cargo test --workspace
 
+      - name: Generate Rustdoc
+        run: cargo doc --no-deps --workspace
+
       - name: Build WASM (release)
         run: cargo build --release --target wasm32-unknown-unknown
