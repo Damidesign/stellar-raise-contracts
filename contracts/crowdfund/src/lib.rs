@@ -760,4 +760,10 @@ impl CrowdfundContract {
     pub fn version(_env: Env) -> u32 {
         CONTRACT_VERSION
     }
+
+    /// Returns the token contract address used for contributions.
+    pub fn token(env: Env) -> Address {
+        env.storage().instance().get(&DataKey::Token).unwrap()
+    }
+
 }
