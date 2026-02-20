@@ -13,7 +13,7 @@ mod test;
 /// This constant must be manually incremented with every contract upgrade
 /// (see Issue #38). External tools use this to detect logic changes at a
 /// given contract address.
-const CONTRACT_VERSION: u32 = 1;
+const CONTRACT_VERSION: u32 = 2;
 
 // ── Data Types ──────────────────────────────────────────────────────────────
 
