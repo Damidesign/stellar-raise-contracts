@@ -1,13 +1,22 @@
 #![cfg(test)]
 
-use soroban_sdk::{testutils::{Address as _, Ledger}, token, Address, Env};
+use soroban_sdk::{
+    testutils::{Address as _, Ledger},
+    token, Address, Env,
+};
 
 use crate::{CrowdfundContract, CrowdfundContractClient};
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 /// Set up a fresh environment with a deployed crowdfund contract and a token.
-fn setup_env() -> (Env, CrowdfundContractClient<'static>, Address, Address, Address) {
+fn setup_env() -> (
+    Env,
+    CrowdfundContractClient<'static>,
+    Address,
+    Address,
+    Address,
+) {
     let env = Env::default();
     env.mock_all_auths();
 
@@ -47,7 +56,15 @@ fn test_initialize() {
     let goal: i128 = 1_000_000;
     let min_contribution: i128 = 1_000;
 
-    client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution);
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
+    );
 
     assert_eq!(client.goal(), goal);
     assert_eq!(client.deadline(), deadline);
@@ -64,8 +81,24 @@ fn test_double_initialize_panics() {
     let goal: i128 = 1_000_000;
     let min_contribution: i128 = 1_000;
 
-    client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution);
-    client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution); // should panic
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
+    );
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
+    ); // should panic
 }
 
 #[test]
@@ -75,7 +108,15 @@ fn test_contribute() {
     let deadline = env.ledger().timestamp() + 3600;
     let goal: i128 = 1_000_000;
     let min_contribution: i128 = 1_000;
-    client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution);
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
+    );
 
     let contributor = Address::generate(&env);
     mint_to(&env, &token_address, &admin, &contributor, 500_000);
@@ -93,7 +134,15 @@ fn test_multiple_contributions() {
     let deadline = env.ledger().timestamp() + 3600;
     let goal: i128 = 1_000_000;
     let min_contribution: i128 = 1_000;
-    client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution);
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
+    );
 
     let alice = Address::generate(&env);
     let bob = Address::generate(&env);
@@ -116,7 +165,15 @@ fn test_contribute_after_deadline_panics() {
     let deadline = env.ledger().timestamp() + 100;
     let goal: i128 = 1_000_000;
     let min_contribution: i128 = 1_000;
-    client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution);
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
+    );
 
     // Fast-forward past the deadline.
     env.ledger().set_timestamp(deadline + 1);
@@ -134,7 +191,15 @@ fn test_withdraw_after_goal_met() {
     let deadline = env.ledger().timestamp() + 3600;
     let goal: i128 = 1_000_000;
     let min_contribution: i128 = 1_000;
-    client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution);
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
+    );
 
     let contributor = Address::generate(&env);
     mint_to(&env, &token_address, &admin, &contributor, 1_000_000);
@@ -163,7 +228,15 @@ fn test_withdraw_before_deadline_panics() {
     let deadline = env.ledger().timestamp() + 3600;
     let goal: i128 = 1_000_000;
     let min_contribution: i128 = 1_000;
-    client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution);
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
+    );
 
     let contributor = Address::generate(&env);
     mint_to(&env, &token_address, &admin, &contributor, 1_000_000);
@@ -180,7 +253,15 @@ fn test_withdraw_goal_not_reached_panics() {
     let deadline = env.ledger().timestamp() + 3600;
     let goal: i128 = 1_000_000;
     let min_contribution: i128 = 1_000;
-    client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution);
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
+    );
 
     let contributor = Address::generate(&env);
     mint_to(&env, &token_address, &admin, &contributor, 500_000);
@@ -199,7 +280,15 @@ fn test_refund_when_goal_not_met() {
     let deadline = env.ledger().timestamp() + 3600;
     let goal: i128 = 1_000_000;
     let min_contribution: i128 = 1_000;
-    client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution);
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
+    );
 
     let alice = Address::generate(&env);
     let bob = Address::generate(&env);
@@ -229,7 +318,15 @@ fn test_refund_when_goal_reached_panics() {
     let deadline = env.ledger().timestamp() + 3600;
     let goal: i128 = 1_000_000;
     let min_contribution: i128 = 1_000;
-    client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution);
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
+    );
 
     let contributor = Address::generate(&env);
     mint_to(&env, &token_address, &admin, &contributor, 1_000_000);
@@ -248,7 +345,15 @@ fn test_double_withdraw_panics() {
     let deadline = env.ledger().timestamp() + 3600;
     let goal: i128 = 1_000_000;
     let min_contribution: i128 = 1_000;
-    client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution);
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
+    );
 
     let contributor = Address::generate(&env);
     mint_to(&env, &token_address, &admin, &contributor, 1_000_000);
@@ -268,7 +373,15 @@ fn test_double_refund_panics() {
     let deadline = env.ledger().timestamp() + 3600;
     let goal: i128 = 1_000_000;
     let min_contribution: i128 = 1_000;
-    client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution);
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
+    );
 
     let alice = Address::generate(&env);
     mint_to(&env, &token_address, &admin, &alice, 500_000);
@@ -287,7 +400,15 @@ fn test_cancel_with_no_contributions() {
     let deadline = env.ledger().timestamp() + 3600;
     let goal: i128 = 1_000_000;
     let min_contribution: i128 = 1_000;
-    client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution);
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
+    );
 
     client.cancel();
 
@@ -301,7 +422,15 @@ fn test_cancel_with_contributions() {
     let deadline = env.ledger().timestamp() + 3600;
     let goal: i128 = 1_000_000;
     let min_contribution: i128 = 1_000;
-    client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution);
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
+    );
 
     let alice = Address::generate(&env);
     let bob = Address::generate(&env);
@@ -338,11 +467,19 @@ fn test_cancel_by_non_creator_panics() {
     let deadline = env.ledger().timestamp() + 3600;
     let goal: i128 = 1_000_000;
     let min_contribution: i128 = 1_000;
-    client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution);
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
+    );
 
     env.mock_all_auths_allowing_non_root_auth();
     env.set_auths(&[]);
-    
+
     client.mock_auths(&[soroban_sdk::testutils::MockAuth {
         address: &non_creator,
         invoke: &soroban_sdk::testutils::MockAuthInvoke {
@@ -366,7 +503,15 @@ fn test_contribute_below_minimum_panics() {
     let deadline = env.ledger().timestamp() + 3600;
     let goal: i128 = 1_000_000;
     let min_contribution: i128 = 10_000;
-    client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution);
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
+    );
 
     let contributor = Address::generate(&env);
     mint_to(&env, &token_address, &admin, &contributor, 5_000);
@@ -381,7 +526,15 @@ fn test_contribute_exact_minimum() {
     let deadline = env.ledger().timestamp() + 3600;
     let goal: i128 = 1_000_000;
     let min_contribution: i128 = 10_000;
-    client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution);
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
+    );
 
     let contributor = Address::generate(&env);
     mint_to(&env, &token_address, &admin, &contributor, 10_000);
@@ -399,7 +552,15 @@ fn test_contribute_above_minimum() {
     let deadline = env.ledger().timestamp() + 3600;
     let goal: i128 = 1_000_000;
     let min_contribution: i128 = 10_000;
-    client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution);
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
+    );
 
     let contributor = Address::generate(&env);
     mint_to(&env, &token_address, &admin, &contributor, 50_000);
@@ -408,6 +569,80 @@ fn test_contribute_above_minimum() {
 
     assert_eq!(client.total_raised(), 50_000);
     assert_eq!(client.contribution(&contributor), 50_000);
+}
+
+// ── Metadata Tests ─────────────────────────────────────────────────────────
+
+#[test]
+fn test_metadata_retrieval() {
+    let (env, client, creator, token_address, _admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+    let category = soroban_sdk::String::from_str(&env, "Art");
+    let mut tags = soroban_sdk::Vec::new(&env);
+    tags.push_back(soroban_sdk::String::from_str(&env, "NFT"));
+    tags.push_back(soroban_sdk::String::from_str(&env, "Creative"));
+
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &category,
+        &tags,
+    );
+
+    assert_eq!(client.category(), category);
+    assert_eq!(client.tags(), tags);
+}
+
+#[test]
+fn test_empty_tags() {
+    let (env, client, creator, token_address, _admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+    let category = soroban_sdk::String::from_str(&env, "Charity");
+    let tags = soroban_sdk::Vec::new(&env);
+
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &category,
+        &tags,
+    );
+
+    assert_eq!(client.category(), category);
+    assert_eq!(client.tags().len(), 0);
+}
+
+#[test]
+#[should_panic(expected = "category must not be empty")]
+fn test_initialize_empty_category_panics() {
+    let (env, client, creator, token_address, _admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+    let category = soroban_sdk::String::from_str(&env, ""); // Empty category
+    let tags = soroban_sdk::Vec::new(&env);
+
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &category,
+        &tags,
+    );
 }
 
 // ── Campaign Stats Tests ───────────────────────────────────────────────────
@@ -419,7 +654,15 @@ fn test_stats_no_contributions() {
     let deadline = env.ledger().timestamp() + 3600;
     let goal: i128 = 1_000_000;
     let min_contribution: i128 = 1_000;
-    client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution);
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
+    );
 
     let stats = client.get_stats();
 
@@ -438,7 +681,15 @@ fn test_stats_single_contributor() {
     let deadline = env.ledger().timestamp() + 3600;
     let goal: i128 = 1_000_000;
     let min_contribution: i128 = 1_000;
-    client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution);
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
+    );
 
     let contributor = Address::generate(&env);
     mint_to(&env, &token_address, &admin, &contributor, 500_000);
@@ -461,12 +712,20 @@ fn test_stats_multiple_contributors() {
     let deadline = env.ledger().timestamp() + 3600;
     let goal: i128 = 1_000_000;
     let min_contribution: i128 = 1_000;
-    client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution);
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
+    );
 
     let alice = Address::generate(&env);
     let bob = Address::generate(&env);
     let charlie = Address::generate(&env);
-    
+
     mint_to(&env, &token_address, &admin, &alice, 600_000);
     mint_to(&env, &token_address, &admin, &bob, 300_000);
     mint_to(&env, &token_address, &admin, &charlie, 100_000);
@@ -492,7 +751,15 @@ fn test_stats_progress_capped_at_10000() {
     let deadline = env.ledger().timestamp() + 3600;
     let goal: i128 = 1_000_000;
     let min_contribution: i128 = 1_000;
-    client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution);
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
+    );
 
     let contributor = Address::generate(&env);
     mint_to(&env, &token_address, &admin, &contributor, 1_500_000);

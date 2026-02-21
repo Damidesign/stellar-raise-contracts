@@ -48,6 +48,10 @@ pub enum DataKey {
     Status,
     /// Minimum contribution amount.
     MinContribution,
+    /// Primary campaign category (e.g. Technology, Art).
+    Category,
+    /// Optional descriptive tags.
+    Tags,
 }
 
 // ── Contract ────────────────────────────────────────────────────────────────
@@ -65,6 +69,8 @@ impl CrowdfundContract {
     /// * `goal`             – The funding goal (in the token's smallest unit).
     /// * `deadline`         – The campaign deadline as a ledger timestamp.
     /// * `min_contribution` – The minimum contribution amount.
+    /// * `category`         – Primary campaign category (e.g. Technology, Art).
+    /// * `tags`             – Optional descriptive tags for the campaign.
     pub fn initialize(
         env: Env,
         creator: Address,
@@ -72,10 +78,16 @@ impl CrowdfundContract {
         goal: i128,
         deadline: u64,
         min_contribution: i128,
+        category: soroban_sdk::String,
+        tags: Vec<soroban_sdk::String>,
     ) {
         // Prevent re-initialization.
         if env.storage().instance().has(&DataKey::Creator) {
             panic!("already initialized");
+        }
+
+        if category.len() == 0 {
+            panic!("category must not be empty");
         }
 
         creator.require_auth();
@@ -85,6 +97,8 @@ impl CrowdfundContract {
         env.storage().instance().set(&DataKey::Goal, &goal);
         env.storage().instance().set(&DataKey::Deadline, &deadline);
         env.storage().instance().set(&DataKey::MinContribution, &min_contribution);
+        env.storage().instance().set(&DataKey::Category, &category);
+        env.storage().instance().set(&DataKey::Tags, &tags);
         env.storage().instance().set(&DataKey::TotalRaised, &0i128);
         env.storage().instance().set(&DataKey::Status, &Status::Active);
 
@@ -309,6 +323,16 @@ impl CrowdfundContract {
     /// Returns the minimum contribution amount.
     pub fn min_contribution(env: Env) -> i128 {
         env.storage().instance().get(&DataKey::MinContribution).unwrap()
+    }
+
+    /// Returns the primary campaign category.
+    pub fn category(env: Env) -> soroban_sdk::String {
+        env.storage().instance().get(&DataKey::Category).unwrap()
+    }
+
+    /// Returns the optional descriptive tags.
+    pub fn tags(env: Env) -> Vec<soroban_sdk::String> {
+        env.storage().instance().get(&DataKey::Tags).unwrap_or(Vec::new(&env))
     }
 
     /// Returns comprehensive campaign statistics.
