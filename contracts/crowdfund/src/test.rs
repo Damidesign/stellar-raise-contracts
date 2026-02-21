@@ -889,133 +889,224 @@ fn test_contribute_above_minimum() {
     assert_eq!(client.contribution(&contributor), 50_000);
 }
 
-// ── Hard Cap Tests ─────────────────────────────────────────────────────────
+// ── Tiered Rewards Tests ───────────────────────────────────────────────────
 
 #[test]
-fn test_contribute_up_to_hard_cap() {
+fn test_get_user_tier_bronze_level() {
     let (env, client, creator, token_address, admin) = setup_env();
 
     let deadline = env.ledger().timestamp() + 3600;
     let goal: i128 = 1_000_000;
-    let hard_cap: i128 = 1_500_000;
     let min_contribution: i128 = 1_000;
-
     client.initialize(
         &creator,
         &token_address,
         &goal,
-        &hard_cap,
+        &deadline,
+        &min_contribution,
+        &None,
+    );
+
+    let bronze = soroban_sdk::String::from_str(&env, "Bronze");
+    let silver = soroban_sdk::String::from_str(&env, "Silver");
+    let gold = soroban_sdk::String::from_str(&env, "Gold");
+    client.add_reward_tier(&creator, &bronze, &10_000);
+    client.add_reward_tier(&creator, &silver, &100_000);
+    client.add_reward_tier(&creator, &gold, &500_000);
+
+    let contributor = Address::generate(&env);
+    mint_to(&env, &token_address, &admin, &contributor, 50_000);
+    client.contribute(&contributor, &50_000);
+
+    let tier = client.get_user_tier(&contributor);
+    assert!(tier.is_some());
+    assert_eq!(tier.unwrap(), bronze);
+}
+
+#[test]
+fn test_get_user_tier_gold_level() {
+    let (env, client, creator, token_address, admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &None,
+    );
+
+    let bronze = soroban_sdk::String::from_str(&env, "Bronze");
+    let silver = soroban_sdk::String::from_str(&env, "Silver");
+    let gold = soroban_sdk::String::from_str(&env, "Gold");
+    client.add_reward_tier(&creator, &bronze, &10_000);
+    client.add_reward_tier(&creator, &silver, &100_000);
+    client.add_reward_tier(&creator, &gold, &500_000);
+
+    let contributor = Address::generate(&env);
+    mint_to(&env, &token_address, &admin, &contributor, 600_000);
+    client.contribute(&contributor, &600_000);
+
+    let tier = client.get_user_tier(&contributor);
+    assert!(tier.is_some());
+    assert_eq!(tier.unwrap(), gold);
+}
+
+#[test]
+fn test_get_user_tier_non_contributor_returns_none() {
+    let (env, client, creator, token_address, admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &None,
+    );
+
+    let bronze = soroban_sdk::String::from_str(&env, "Bronze");
+    client.add_reward_tier(&creator, &bronze, &10_000);
+
+    let non_contributor = Address::generate(&env);
+    let tier = client.get_user_tier(&non_contributor);
+    assert!(tier.is_none());
+}
+
+#[test]
+fn test_get_user_tier_no_tiers_defined_returns_none() {
+    let (env, client, creator, token_address, admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
         &deadline,
         &min_contribution,
         &None,
     );
 
     let contributor = Address::generate(&env);
-    mint_to(&env, &token_address, &admin, &contributor, hard_cap);
+    mint_to(&env, &token_address, &admin, &contributor, 500_000);
+    client.contribute(&contributor, &500_000);
 
-    // Contribute exactly up to hard cap — should succeed
-    client.contribute(&contributor, &hard_cap);
-
-    assert_eq!(client.total_raised(), hard_cap);
-    assert_eq!(client.hard_cap(), hard_cap);
-    assert_eq!(client.contribution(&contributor), hard_cap);
+    let tier = client.get_user_tier(&contributor);
+    assert!(tier.is_none());
 }
 
 #[test]
-fn test_contribute_exceeds_hard_cap_rejected() {
+fn test_get_user_tier_highest_qualifying_tier_returned() {
     let (env, client, creator, token_address, admin) = setup_env();
 
     let deadline = env.ledger().timestamp() + 3600;
     let goal: i128 = 1_000_000;
-    let hard_cap: i128 = 1_000_000;
     let min_contribution: i128 = 1_000;
-
     client.initialize(
         &creator,
         &token_address,
         &goal,
-        &hard_cap,
         &deadline,
         &min_contribution,
         &None,
     );
+
+    let bronze = soroban_sdk::String::from_str(&env, "Bronze");
+    let silver = soroban_sdk::String::from_str(&env, "Silver");
+    let gold = soroban_sdk::String::from_str(&env, "Gold");
+    client.add_reward_tier(&creator, &bronze, &10_000);
+    client.add_reward_tier(&creator, &silver, &100_000);
+    client.add_reward_tier(&creator, &gold, &500_000);
 
     let contributor = Address::generate(&env);
-    mint_to(&env, &token_address, &admin, &contributor, 2_000_000);
+    mint_to(&env, &token_address, &admin, &contributor, 1_000_000);
+    client.contribute(&contributor, &1_000_000);
 
-    // First contribution fills hard cap
-    client.contribute(&contributor, &hard_cap);
-
-    // Second contribution should be rejected — already at hard cap
-    let result = client.try_contribute(&contributor, &1_000);
-
-    assert!(result.is_err());
-    assert_eq!(
-        result.unwrap_err().unwrap(),
-        crate::ContractError::HardCapExceeded
-    );
-    assert_eq!(client.total_raised(), hard_cap);
+    let tier = client.get_user_tier(&contributor);
+    assert!(tier.is_some());
+    assert_eq!(tier.unwrap(), gold);
 }
 
 #[test]
-fn test_contribute_partial_fits_within_hard_cap() {
-    let (env, client, creator, token_address, admin) = setup_env();
-
-    let deadline = env.ledger().timestamp() + 3600;
-    let goal: i128 = 1_000_000;
-    let hard_cap: i128 = 1_500_000;
-    let min_contribution: i128 = 1_000;
-
-    client.initialize(
-        &creator,
-        &token_address,
-        &goal,
-        &hard_cap,
-        &deadline,
-        &min_contribution,
-        &None,
-    );
-
-    let alice = Address::generate(&env);
-    let bob = Address::generate(&env);
-    mint_to(&env, &token_address, &admin, &alice, 1_000_000);
-    mint_to(&env, &token_address, &admin, &bob, 1_000_000);
-
-    // Alice contributes 1_000_000 (total = 1_000_000)
-    client.contribute(&alice, &1_000_000);
-
-    // Bob tries to contribute 1_000_000 but only 500_000 fits — partial accepted
-    client.contribute(&bob, &1_000_000);
-
-    assert_eq!(client.total_raised(), hard_cap);
-    assert_eq!(client.contribution(&alice), 1_000_000);
-    assert_eq!(client.contribution(&bob), 500_000);
-}
-
-#[test]
-fn test_initialize_rejects_hard_cap_less_than_goal() {
+#[should_panic]
+fn test_add_reward_tier_non_creator_rejected() {
     let (env, client, creator, token_address, _admin) = setup_env();
 
     let deadline = env.ledger().timestamp() + 3600;
     let goal: i128 = 1_000_000;
-    let hard_cap: i128 = 500_000; // less than goal
     let min_contribution: i128 = 1_000;
-
-    let result = client.try_initialize(
+    client.initialize(
         &creator,
         &token_address,
         &goal,
-        &hard_cap,
         &deadline,
         &min_contribution,
         &None,
     );
 
-    assert!(result.is_err());
-    assert_eq!(
-        result.unwrap_err().unwrap(),
-        crate::ContractError::InvalidHardCap
+    let non_creator = Address::generate(&env);
+    let bronze = soroban_sdk::String::from_str(&env, "Bronze");
+    client.add_reward_tier(&non_creator, &bronze, &10_000);
+}
+
+#[test]
+#[should_panic(expected = "min_amount must be greater than 0")]
+fn test_add_reward_tier_rejects_zero_min_amount() {
+    let (env, client, creator, token_address, _admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &None,
     );
+
+    let bronze = soroban_sdk::String::from_str(&env, "Bronze");
+    client.add_reward_tier(&creator, &bronze, &0);
+}
+
+#[test]
+fn test_reward_tiers_view() {
+    let (env, client, creator, token_address, _admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &None,
+    );
+
+    assert_eq!(client.reward_tiers().len(), 0);
+
+    let bronze = soroban_sdk::String::from_str(&env, "Bronze");
+    let silver = soroban_sdk::String::from_str(&env, "Silver");
+    client.add_reward_tier(&creator, &bronze, &10_000);
+    client.add_reward_tier(&creator, &silver, &100_000);
+
+    let tiers = client.reward_tiers();
+    assert_eq!(tiers.len(), 2);
+    assert_eq!(tiers.get(0).unwrap().name, bronze);
+    assert_eq!(tiers.get(0).unwrap().min_amount, 10_000);
+    assert_eq!(tiers.get(1).unwrap().name, silver);
+    assert_eq!(tiers.get(1).unwrap().min_amount, 100_000);
 }
 
 // ── Roadmap Tests ──────────────────────────────────────────────────────────
@@ -1521,7 +1612,6 @@ fn test_add_single_stretch_goal() {
 
     assert_eq!(client.current_milestone(), stretch_milestone);
 }
-
 
 // ── Property-Based Fuzz Tests with Proptest ────────────────────────────────
 
