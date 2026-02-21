@@ -58,6 +58,7 @@ fn test_initialize() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -89,6 +90,7 @@ fn test_double_initialize_panics() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -97,6 +99,7 @@ fn test_double_initialize_panics() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -120,6 +123,7 @@ fn test_contribute() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -145,6 +149,7 @@ fn test_multiple_contributions() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -174,6 +179,7 @@ fn test_contribute_after_deadline_panics() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -205,6 +211,7 @@ fn test_withdraw_after_goal_met() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -240,6 +247,7 @@ fn test_withdraw_before_deadline_panics() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -269,6 +277,7 @@ fn test_withdraw_goal_not_reached_panics() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -301,6 +310,7 @@ fn test_refund_when_goal_not_met() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -337,6 +347,7 @@ fn test_refund_when_goal_reached_panics() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -383,9 +394,9 @@ fn test_bug_condition_exploration_all_error_conditions_panic() {
         let deadline = env.ledger().timestamp() + 3600;
         let goal: i128 = 1_000_000;
 
-        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None);
+        client.initialize(&creator, &token_address, &goal, &(goal * 2), &deadline, &1_000, &None);
         let result =
-            client.try_initialize(&creator, &token_address, &goal, &deadline, &1_000, &None);
+            client.try_initialize(&creator, &token_address, &goal, &(goal * 2), &deadline, &1_000, &None);
 
         assert!(result.is_err());
         assert_eq!(
@@ -399,7 +410,7 @@ fn test_bug_condition_exploration_all_error_conditions_panic() {
         let (env, client, creator, token_address, admin) = setup_env();
         let deadline = env.ledger().timestamp() + 100;
         let goal: i128 = 1_000_000;
-        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None);
+        client.initialize(&creator, &token_address, &goal, &(goal * 2), &deadline, &1_000, &None);
 
         env.ledger().set_timestamp(deadline + 1);
 
@@ -416,7 +427,7 @@ fn test_bug_condition_exploration_all_error_conditions_panic() {
         let (env, client, creator, token_address, admin) = setup_env();
         let deadline = env.ledger().timestamp() + 3600;
         let goal: i128 = 1_000_000;
-        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None);
+        client.initialize(&creator, &token_address, &goal, &(goal * 2), &deadline, &1_000, &None);
 
         let contributor = Address::generate(&env);
         mint_to(&env, &token_address, &admin, &contributor, 1_000_000);
@@ -436,7 +447,7 @@ fn test_bug_condition_exploration_all_error_conditions_panic() {
         let (env, client, creator, token_address, admin) = setup_env();
         let deadline = env.ledger().timestamp() + 3600;
         let goal: i128 = 1_000_000;
-        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None);
+        client.initialize(&creator, &token_address, &goal, &(goal * 2), &deadline, &1_000, &None);
 
         let contributor = Address::generate(&env);
         mint_to(&env, &token_address, &admin, &contributor, 500_000);
@@ -454,7 +465,7 @@ fn test_bug_condition_exploration_all_error_conditions_panic() {
         let (env, client, creator, token_address, admin) = setup_env();
         let deadline = env.ledger().timestamp() + 3600;
         let goal: i128 = 1_000_000;
-        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None);
+        client.initialize(&creator, &token_address, &goal, &(goal * 2), &deadline, &1_000, &None);
 
         let contributor = Address::generate(&env);
         mint_to(&env, &token_address, &admin, &contributor, 500_000);
@@ -474,7 +485,7 @@ fn test_bug_condition_exploration_all_error_conditions_panic() {
         let (env, client, creator, token_address, admin) = setup_env();
         let deadline = env.ledger().timestamp() + 3600;
         let goal: i128 = 1_000_000;
-        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None);
+        client.initialize(&creator, &token_address, &goal, &(goal * 2), &deadline, &1_000, &None);
 
         let contributor = Address::generate(&env);
         mint_to(&env, &token_address, &admin, &contributor, 1_000_000);
@@ -502,7 +513,7 @@ proptest! {
         let deadline = env.ledger().timestamp() + deadline_offset;
 
         // Test 3.1: First initialization stores all values correctly
-        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None);
+        client.initialize(&creator, &token_address, &goal, &(goal * 2), &deadline, &1_000, &None);
 
         prop_assert_eq!(client.goal(), goal);
         prop_assert_eq!(client.deadline(), deadline);
@@ -518,7 +529,7 @@ proptest! {
         let (env, client, creator, token_address, admin) = setup_env();
         let deadline = env.ledger().timestamp() + deadline_offset;
 
-        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None);
+        client.initialize(&creator, &token_address, &goal, &(goal * 2), &deadline, &1_000, &None);
 
         let contributor = Address::generate(&env);
         mint_to(&env, &token_address, &admin, &contributor, contribution_amount);
@@ -538,7 +549,7 @@ proptest! {
         let (env, client, creator, token_address, admin) = setup_env();
         let deadline = env.ledger().timestamp() + deadline_offset;
 
-        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None);
+        client.initialize(&creator, &token_address, &goal, &(goal * 2), &deadline, &1_000, &None);
 
         let contributor = Address::generate(&env);
         mint_to(&env, &token_address, &admin, &contributor, goal);
@@ -569,7 +580,7 @@ proptest! {
         // Ensure contribution is less than goal
         let contribution = contribution_amount.min(goal - 1);
 
-        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None);
+        client.initialize(&creator, &token_address, &goal, &(goal * 2), &deadline, &1_000, &None);
 
         let contributor = Address::generate(&env);
         mint_to(&env, &token_address, &admin, &contributor, contribution);
@@ -595,7 +606,7 @@ proptest! {
         let (env, client, creator, token_address, admin) = setup_env();
         let deadline = env.ledger().timestamp() + deadline_offset;
 
-        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None);
+        client.initialize(&creator, &token_address, &goal, &(goal * 2), &deadline, &1_000, &None);
 
         let contributor = Address::generate(&env);
         mint_to(&env, &token_address, &admin, &contributor, contribution_amount);
@@ -618,8 +629,9 @@ proptest! {
     ) {
         let (env, client, creator, token_address, admin) = setup_env();
         let deadline = env.ledger().timestamp() + deadline_offset;
+        let hard_cap = (amount1 + amount2 + amount3).max(goal);
 
-        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None);
+        client.initialize(&creator, &token_address, &goal, &hard_cap, &deadline, &1_000, &None);
 
         let alice = Address::generate(&env);
         let bob = Address::generate(&env);
@@ -655,6 +667,7 @@ fn test_double_withdraw_panics() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -682,6 +695,7 @@ fn test_double_refund_panics() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -708,6 +722,7 @@ fn test_cancel_with_no_contributions() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -729,6 +744,7 @@ fn test_cancel_with_contributions() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -773,6 +789,7 @@ fn test_cancel_by_non_creator_panics() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -808,6 +825,7 @@ fn test_contribute_below_minimum_panics() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -830,6 +848,7 @@ fn test_contribute_exact_minimum() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -855,6 +874,7 @@ fn test_contribute_above_minimum() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -1102,6 +1122,7 @@ fn test_add_single_roadmap_item() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -1130,6 +1151,7 @@ fn test_add_multiple_roadmap_items_in_order() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -1170,6 +1192,7 @@ fn test_add_roadmap_item_with_past_date_panics() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -1196,6 +1219,7 @@ fn test_add_roadmap_item_with_current_date_panics() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -1219,6 +1243,7 @@ fn test_add_roadmap_item_with_empty_description_panics() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -1254,6 +1279,7 @@ fn test_add_roadmap_item_by_non_creator_panics() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -1290,6 +1316,7 @@ fn test_roadmap_empty_after_initialization() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -1312,6 +1339,7 @@ fn test_update_title() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -1335,6 +1363,7 @@ fn test_update_description() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -1356,6 +1385,7 @@ fn test_update_socials() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -1377,6 +1407,7 @@ fn test_partial_update() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -1403,6 +1434,7 @@ fn test_update_metadata_when_not_active_panics() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -1434,6 +1466,7 @@ fn test_update_metadata_after_cancel_panics() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -1464,6 +1497,7 @@ fn test_update_deadline_extends_campaign() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -1492,6 +1526,7 @@ fn test_update_deadline_rejects_shortening() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -1514,6 +1549,7 @@ fn test_update_deadline_rejects_equal_deadline() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -1535,6 +1571,7 @@ fn test_update_deadline_when_not_active_panics() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -1564,6 +1601,7 @@ fn test_add_single_stretch_goal() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -1595,8 +1633,9 @@ proptest! {
     ) {
         let (env, client, creator, token_address, admin) = setup_env();
         let deadline = env.ledger().timestamp() + deadline_offset;
+        let hard_cap = (amount1 + amount2 + amount3).max(goal * 2);
 
-        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None);
+        client.initialize(&creator, &token_address, &goal, &hard_cap, &deadline, &1_000, &None);
 
         let alice = Address::generate(&env);
         let bob = Address::generate(&env);
@@ -1641,7 +1680,7 @@ proptest! {
         // Ensure contribution is less than goal
         let safe_contribution = contribution.min(goal - 1);
 
-        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None);
+        client.initialize(&creator, &token_address, &goal, &(goal * 2), &deadline, &1_000, &None);
 
         let contributor = Address::generate(&env);
         mint_to(&env, &token_address, &admin, &contributor, safe_contribution);
@@ -1682,7 +1721,7 @@ proptest! {
         let (env, client, creator, token_address, admin) = setup_env();
         let deadline = env.ledger().timestamp() + deadline_offset;
 
-        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None);
+        client.initialize(&creator, &token_address, &goal, &(goal * 2), &deadline, &1_000, &None);
 
         let contributor = Address::generate(&env);
         // Mint enough tokens so the failure is due to amount validation, not balance
@@ -1722,6 +1761,7 @@ proptest! {
             &creator,
             &token_address,
             &goal,
+            &(goal * 2),
             &past_deadline,
             &1_000,
             &None,
@@ -1759,8 +1799,10 @@ proptest! {
     ) {
         let (env, client, creator, token_address, admin) = setup_env();
         let deadline = env.ledger().timestamp() + deadline_offset;
+        let expected_total = amount1 + amount2 + amount3;
+        let hard_cap = expected_total.max(goal);
 
-        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None);
+        client.initialize(&creator, &token_address, &goal, &hard_cap, &deadline, &1_000, &None);
 
         let contributor1 = Address::generate(&env);
         let contributor2 = Address::generate(&env);
@@ -1773,8 +1815,6 @@ proptest! {
         client.contribute(&contributor1, &amount1);
         client.contribute(&contributor2, &amount2);
         client.contribute(&contributor3, &amount3);
-
-        let expected_total = amount1 + amount2 + amount3;
 
         // **INVARIANT**: total_raised must equal sum of all contributions
         prop_assert_eq!(client.total_raised(), expected_total);
@@ -1799,7 +1839,7 @@ proptest! {
         let (env, client, creator, token_address, admin) = setup_env();
         let deadline = env.ledger().timestamp() + deadline_offset;
 
-        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None);
+        client.initialize(&creator, &token_address, &goal, &(goal * 2), &deadline, &1_000, &None);
 
         let contributor = Address::generate(&env);
         mint_to(&env, &token_address, &admin, &contributor, goal);
@@ -1844,7 +1884,7 @@ proptest! {
         let (env, client, creator, token_address, admin) = setup_env();
         let deadline = env.ledger().timestamp() + deadline_offset;
 
-        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None);
+        client.initialize(&creator, &token_address, &goal, &(goal * 2), &deadline, &1_000, &None);
 
         let contributor = Address::generate(&env);
         let total_needed = amount1.saturating_add(amount2).saturating_add(amount3);
@@ -1885,7 +1925,7 @@ proptest! {
 
         let safe_contribution = contribution.min(goal - 1);
 
-        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None);
+        client.initialize(&creator, &token_address, &goal, &(goal * 2), &deadline, &1_000, &None);
 
         let contributor = Address::generate(&env);
         mint_to(&env, &token_address, &admin, &contributor, safe_contribution);
@@ -1919,7 +1959,7 @@ proptest! {
         let (env, client, creator, token_address, admin) = setup_env();
         let deadline = env.ledger().timestamp() + deadline_offset;
 
-        client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution, &None);
+        client.initialize(&creator, &token_address, &goal, &(goal * 2), &deadline, &min_contribution, &None);
 
         let contributor = Address::generate(&env);
         let amount_to_contribute = below_minimum.min(min_contribution - 1);
@@ -1952,7 +1992,7 @@ proptest! {
         let (env, client, creator, token_address, admin) = setup_env();
         let deadline = env.ledger().timestamp() + deadline_offset;
 
-        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None);
+        client.initialize(&creator, &token_address, &goal, &(goal * 2), &deadline, &1_000, &None);
 
         // Move past deadline
         env.ledger().set_timestamp(deadline + time_after_deadline);
