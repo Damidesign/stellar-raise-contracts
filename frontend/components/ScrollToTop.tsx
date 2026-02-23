@@ -34,9 +34,9 @@ const ScrollToTop = () => {
   );
 };
 
-const styles = {
+const styles: { button: React.CSSProperties } = {
   button: {
-    position: "fixed" as const,
+    position: "fixed",
     bottom: "2rem",
     right: "2rem",
     backgroundColor: "#4f46e5",
@@ -53,7 +53,7 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-  },
+  } as React.CSSProperties,
 };
 
 export default ScrollToTop;
