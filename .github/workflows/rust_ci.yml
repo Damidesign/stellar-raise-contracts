@@ -1,10 +1,14 @@
 name: Rust CI
 
 on:
-  pull_request:
-    branches: [main]
   push:
-    branches: [main]
+    branches:
+      - develop
+      - main
+  pull_request:
+    branches:
+      - develop
+      - main
 
 env:
   CARGO_TERM_COLOR: always
@@ -30,14 +34,30 @@ jobs:
           targets: wasm32-unknown-unknown
           components: clippy, rustfmt
 
-      - name: Cache cargo registry & build
-        uses: actions/cache@v4
+      # ── Cache ────────────────────────────────────────────
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          # Cache key prefix — increment to bust cache manually
+          prefix-key: "v1-rust"
+          # Cache the registry and target directories
+          shared-key: "crowdfund"
+          cache-targets: true
+          cache-all-crates: true
+
+      # ── Alternative: using actions/cache directly ────────
+      # Uncomment below and remove rust-cache above if preferred:
+      #
+      # - name: Cache cargo registry
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: |
+      #       ~/.cargo/registry
+      #       ~/.cargo/git
+      #       target/
+      #     key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-cargo-
 
       - name: Check formatting
         run: cargo fmt --all -- --check
