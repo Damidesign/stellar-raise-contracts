@@ -1167,88 +1167,13 @@ impl CrowdfundContract {
         env.storage().instance().get(&DataKey::Token).unwrap()
     }
 
-    /// Returns the top referrers sorted by total amount referred (descending).
-    ///
-    /// # Arguments
-    /// * `limit` - Maximum number of referrers to return (must be > 0)
-    ///
-    /// # Returns
-    /// Vec of (Address, i128) tuples sorted by amount descending
-    ///
-    /// # Errors
-    /// * ContractError::InvalidLimit - if limit is 0
-    pub fn top_referrers(env: Env, limit: u32) -> Result<Vec<(Address, i128)>, ContractError> {
-        if limit == 0 {
-            return Err(ContractError::InvalidLimit);
-        }
-
-        // Get all contributors to find potential referrers
+    /// Returns the number of unique contributors.
+    pub fn contributor_count(env: Env) -> u32 {
         let contributors: Vec<Address> = env
             .storage()
             .persistent()
             .get(&DataKey::Contributors)
             .unwrap_or_else(|| Vec::new(&env));
-
-        let mut referrers: Vec<(Address, i128)> = Vec::new(&env);
-
-        // Check each contributor's referral tally
-        for contributor in contributors.iter() {
-            let referral_key = DataKey::ReferralTally(contributor.clone());
-            if let Some(tally) = env.storage().persistent().get::<_, i128>(&referral_key) {
-                if tally > 0 {
-                    referrers.push_back((contributor.clone(), tally));
-                }
-            }
-        }
-
-        // Sort by tally descending
-        // Note: Soroban doesn't have built-in sorting, so we'll use a simple approach
-        // In practice, you might want to implement a more efficient sorting algorithm
-        let mut sorted = Vec::new(&env);
-        
-        // Simple bubble sort (for demonstration - in production use more efficient sort)
-        let referrers_len = referrers.len();
-        for i in 0..referrers_len {
-            let mut max_idx = i;
-            for j in (i + 1)..referrers_len {
-                if referrers.get(j).unwrap().1 > referrers.get(max_idx).unwrap().1 {
-                    max_idx = j;
-                }
-            }
-            if max_idx != i {
-                // Swap
-                let temp = referrers.get(i).unwrap();
-                referrers.set(i, referrers.get(max_idx).unwrap());
-                referrers.set(max_idx, temp);
-            }
-        }
-
-        // Take only the requested limit
-        let result_limit = if referrers.len() < limit {
-            referrers.len() as u32
-        } else {
-            limit
-        };
-
-        for i in 0..result_limit {
-            sorted.push_back(referrers.get(i).unwrap());
-        }
-
-        Ok(sorted)
-    }
-
-    /// Returns the total amount referred by a specific address.
-    ///
-    /// # Arguments
-    /// * `referrer` - The address to check referral tally for
-    ///
-    /// # Returns
-    /// Total amount referred by the address (0 if none)
-    pub fn referral_tally(env: Env, referrer: Address) -> i128 {
-        let referral_key = DataKey::ReferralTally(referrer);
-        env.storage()
-            .persistent()
-            .get(&referral_key)
-            .unwrap_or(0)
+        contributors.len()
     }
 }
