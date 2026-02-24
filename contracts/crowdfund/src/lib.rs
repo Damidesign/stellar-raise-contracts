@@ -1,5 +1,6 @@
 #![no_std]
 #![allow(missing_docs)]
+#![allow(clippy::too_many_arguments)]
 
 use soroban_sdk::{contract, contractimpl, contracttype, token, Address, Env, String, Symbol, Vec};
 
@@ -93,6 +94,12 @@ pub enum DataKey {
     TotalPledged,
     /// Stretch goals for bonus milestones.
     StretchGoals,
+    /// Optional secondary bonus goal threshold.
+    BonusGoal,
+    /// Optional description for the secondary bonus goal.
+    BonusGoalDescription,
+    /// Tracks if bonus-goal-reached event has already been emitted.
+    BonusGoalReachedEmitted,
     /// List of all pledgers (for conditional pledges).
     Pledgers,
     /// List of roadmap items with dates and descriptions.
@@ -154,6 +161,8 @@ impl CrowdfundContract {
         deadline: u64,
         min_contribution: i128,
         platform_config: Option<PlatformConfig>,
+        bonus_goal: Option<i128>,
+        bonus_goal_description: Option<String>,
     ) -> Result<(), ContractError> {
         // Prevent re-initialization.
         if env.storage().instance().has(&DataKey::Creator) {
@@ -167,6 +176,19 @@ impl CrowdfundContract {
             if config.fee_bps > 10_000 {
                 panic!("platform fee cannot exceed 100%");
             }
+        }
+
+        if let Some(bg) = bonus_goal {
+            if bg <= goal {
+                panic!("bonus goal must be greater than primary goal");
+            }
+            env.storage().instance().set(&DataKey::BonusGoal, &bg);
+        }
+
+        if let Some(bg_description) = bonus_goal_description {
+            env.storage()
+                .instance()
+                .set(&DataKey::BonusGoalDescription, &bg_description);
         }
 
         env.storage().instance().set(&DataKey::Creator, &creator);
@@ -187,6 +209,9 @@ impl CrowdfundContract {
             .instance()
             .set(&DataKey::MinContribution, &min_contribution);
         env.storage().instance().set(&DataKey::TotalRaised, &0i128);
+        env.storage()
+            .instance()
+            .set(&DataKey::BonusGoalReachedEmitted, &false);
         env.storage()
             .instance()
             .set(&DataKey::Status, &Status::Active);
@@ -256,6 +281,20 @@ impl CrowdfundContract {
         env.storage()
             .instance()
             .set(&DataKey::TotalRaised, &new_total);
+
+        if let Some(bg) = env.storage().instance().get::<_, i128>(&DataKey::BonusGoal) {
+            let already_emitted = env
+                .storage()
+                .instance()
+                .get::<_, bool>(&DataKey::BonusGoalReachedEmitted)
+                .unwrap_or(false);
+            if !already_emitted && total < bg && new_total >= bg {
+                env.events().publish(("campaign", "bonus_goal_reached"), bg);
+                env.storage()
+                    .instance()
+                    .set(&DataKey::BonusGoalReachedEmitted, &true);
+            }
+        }
 
         // Track contributor address if new.
         let mut contributors: Vec<Address> = env
@@ -796,6 +835,55 @@ impl CrowdfundContract {
     /// Returns the funding goal.
     pub fn goal(env: Env) -> i128 {
         env.storage().instance().get(&DataKey::Goal).unwrap()
+    }
+
+    /// Returns the optional bonus-goal threshold.
+    pub fn bonus_goal(env: Env) -> Option<i128> {
+        env.storage().instance().get(&DataKey::BonusGoal)
+    }
+
+    /// Returns the optional bonus-goal description.
+    pub fn bonus_goal_description(env: Env) -> Option<String> {
+        env.storage().instance().get(&DataKey::BonusGoalDescription)
+    }
+
+    /// Returns true if the optional bonus goal has been reached.
+    pub fn bonus_goal_reached(env: Env) -> bool {
+        let total_raised: i128 = env
+            .storage()
+            .instance()
+            .get(&DataKey::TotalRaised)
+            .unwrap_or(0);
+
+        if let Some(bg) = env.storage().instance().get::<_, i128>(&DataKey::BonusGoal) {
+            total_raised >= bg
+        } else {
+            false
+        }
+    }
+
+    /// Returns bonus-goal progress in basis points (capped at 10,000).
+    pub fn bonus_goal_progress_bps(env: Env) -> u32 {
+        let total_raised: i128 = env
+            .storage()
+            .instance()
+            .get(&DataKey::TotalRaised)
+            .unwrap_or(0);
+
+        if let Some(bg) = env.storage().instance().get::<_, i128>(&DataKey::BonusGoal) {
+            if bg > 0 {
+                let raw = (total_raised * 10_000) / bg;
+                if raw > 10_000 {
+                    10_000
+                } else {
+                    raw as u32
+                }
+            } else {
+                0
+            }
+        } else {
+            0
+        }
     }
 
     /// Returns the campaign deadline.
