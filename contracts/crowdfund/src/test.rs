@@ -152,8 +152,8 @@ fn test_set_nft_contract_rejects_non_creator() {
 
     let alice = Address::generate(&env);
     let bob = Address::generate(&env);
-    mint_to(&env, &token_address, &admin, &alice, 600_000);
-    mint_to(&env, &token_address, &admin, &bob, 400_000);
+    mint_to(&env, &token_address, &token_admin, &alice, 600_000);
+    mint_to(&env, &token_address, &token_admin, &bob, 400_000);
 
     client.contribute(&alice, &300_000, &None);
     client.contribute(&bob, &200_000, &None);
@@ -165,7 +165,7 @@ fn test_set_nft_contract_rejects_non_creator() {
 
 #[test]
 fn test_contribute_after_deadline_panics() {
-    let (env, client, creator, token_address, admin) = setup_env();
+    let (env, client, platform_admin, creator, token_address, token_admin) = setup_env();
 
     let deadline = env.ledger().timestamp() + 100;
     let goal: i128 = 1_000_000;
@@ -249,7 +249,7 @@ fn test_contribute_after_deadline_returns_error() {
 
 #[test]
 fn test_withdraw_goal_not_reached_panics() {
-    let (env, client, creator, token_address, admin) = setup_env();
+    let (env, client, platform_admin, creator, token_address, token_admin) = setup_env();
 
     let deadline = env.ledger().timestamp() + 3600;
     let goal: i128 = 1_000_000;
@@ -282,8 +282,8 @@ fn test_contributor_count_zero_before_contributions() {
 
     let alice = Address::generate(&env);
     let bob = Address::generate(&env);
-    mint_to(&env, &token_address, &admin, &alice, 300_000);
-    mint_to(&env, &token_address, &admin, &bob, 200_000);
+    mint_to(&env, &token_address, &token_admin, &alice, 300_000);
+    mint_to(&env, &token_address, &token_admin, &bob, 200_000);
 
     client.contribute(&alice, &300_000, &None);
     client.contribute(&bob, &200_000, &None);
@@ -640,7 +640,7 @@ proptest! {
 #[test]
 #[should_panic(expected = "campaign is not active")]
 fn test_double_withdraw_panics() {
-    let (env, client, creator, token_address, admin) = setup_env();
+    let (env, client, platform_admin, creator, token_address, token_admin) = setup_env();
 
     let deadline = env.ledger().timestamp() + 3600;
     let goal: i128 = 1_000_000;
@@ -648,7 +648,7 @@ fn test_double_withdraw_panics() {
     client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution, &default_title(&env), &default_description(&env), &None);
 
     let contributor = Address::generate(&env);
-    mint_to(&env, &token_address, &admin, &contributor, 1_000_000);
+    mint_to(&env, &token_address, &token_admin, &contributor, 1_000_000);
     client.contribute(&contributor, &1_000_000);
 
     env.ledger().set_timestamp(deadline + 1);
@@ -667,7 +667,7 @@ fn test_contributor_count_multiple_contributors() {
     client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution, &default_title(&env), &default_description(&env), &None);
 
     let alice = Address::generate(&env);
-    mint_to(&env, &token_address, &admin, &alice, 500_000);
+    mint_to(&env, &token_address, &token_admin, &alice, 500_000);
     client.contribute(&alice, &500_000);
 
     env.ledger().set_timestamp(deadline + 1);
@@ -685,7 +685,7 @@ fn test_contributor_count_multiple_contributors() {
 /*
 #[test]
 fn test_cancel_with_no_contributions() {
-    let (env, client, creator, token_address, _admin) = setup_env();
+    let (env, client, platform_admin, creator, token_address, _token_admin) = setup_env();
 
     let deadline = env.ledger().timestamp() + 3600;
     let goal: i128 = 1_000_000;
@@ -1175,6 +1175,7 @@ fn test_add_roadmap_item_by_non_creator_panics() {
     let token_contract_id = env.register_stellar_asset_contract_v2(token_admin.clone());
     let token_address = token_contract_id.address();
 
+    let platform_admin = Address::generate(&env);
     let creator = Address::generate(&env);
     let non_creator = Address::generate(&env);
 

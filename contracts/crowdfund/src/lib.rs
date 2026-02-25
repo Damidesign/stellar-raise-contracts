@@ -130,6 +130,7 @@ pub struct CrowdfundContract;
 impl CrowdfundContract {
     pub fn initialize(
         env: Env,
+        admin: Address,
         creator: Address,
         token: Address,
         goal: i128,
