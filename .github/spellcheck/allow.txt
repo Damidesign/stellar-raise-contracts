@@ -41,3 +41,7 @@ blockchains
 hardcap
 whitelist
 whitelisted
+ed25519
+timelock
+timelocked
+hierarchical
