@@ -1,5 +1,6 @@
 #![no_std]
 #![allow(missing_docs)]
+#![allow(clippy::too_many_arguments)]
 
 use soroban_sdk::{
     contract, contractclient, contracterror, contractimpl, contracttype, token, Address, Env,
@@ -85,6 +86,12 @@ pub enum DataKey {
     StretchGoals,
     /// Total amount referred by each referrer address.
     ReferralTally(Address),
+    /// Optional secondary bonus goal.
+    BonusGoal,
+    /// Optional bonus goal description.
+    BonusGoalDescription,
+    /// Whether a bonus-goal reached event was emitted.
+    BonusGoalReachedEmitted,
 }
 
 #[contracterror]
@@ -122,6 +129,8 @@ impl CrowdfundContract {
         deadline: u64,
         min_contribution: i128,
         platform_config: Option<PlatformConfig>,
+        bonus_goal: Option<i128>,
+        bonus_goal_description: Option<String>,
     ) -> Result<(), ContractError> {
         if env.storage().instance().has(&DataKey::Creator) {
             return Err(ContractError::AlreadyInitialized);
@@ -137,15 +146,40 @@ impl CrowdfundContract {
                 .instance()
                 .set(&DataKey::PlatformConfig, config);
         }
+        if hard_cap < goal {
+            return Err(ContractError::InvalidHardCap);
+        }
+
+        if let Some(bg) = bonus_goal {
+            if bg <= goal {
+                panic!("bonus goal must be greater than primary goal");
+            }
+            env.storage().instance().set(&DataKey::BonusGoal, &bg);
+        }
+
+        if let Some(bg_description) = bonus_goal_description {
+            env.storage()
+                .instance()
+                .set(&DataKey::BonusGoalDescription, &bg_description);
+        }
 
         env.storage().instance().set(&DataKey::Creator, &creator);
         env.storage().instance().set(&DataKey::Token, &token);
         env.storage().instance().set(&DataKey::Goal, &goal);
+        env.storage().instance().set(&DataKey::HardCap, &hard_cap);
         env.storage().instance().set(&DataKey::Deadline, &deadline);
         env.storage()
             .instance()
             .set(&DataKey::MinContribution, &min_contribution);
+        if let Some(config) = platform_config {
+            env.storage()
+                .instance()
+                .set(&DataKey::PlatformConfig, &config);
+        }
         env.storage().instance().set(&DataKey::TotalRaised, &0i128);
+        env.storage()
+            .instance()
+            .set(&DataKey::BonusGoalReachedEmitted, &false);
         env.storage()
             .instance()
             .set(&DataKey::Status, &Status::Active);
@@ -179,7 +213,12 @@ impl CrowdfundContract {
     ///
     /// The contributor must authorize the call. Contributions are rejected
     /// after the deadline has passed.
-    pub fn contribute(env: Env, contributor: Address, amount: i128, referral: Option<Address>) -> Result<(), ContractError> {
+    pub fn contribute(
+        env: Env,
+        contributor: Address,
+        amount: i128,
+        referral: Option<Address>,
+    ) -> Result<(), ContractError> {
         // ── Rate limiting: enforce cooldown between contributions ──
         let now = env.ledger().timestamp();
         let last_time_key = DataKey::LastContributionTime(contributor.clone());
@@ -248,33 +287,32 @@ impl CrowdfundContract {
         }
 
         // Emit contribution event
-        env.events()
-            .publish(("campaign", "contributed"), (contributor.clone(), effective_amount));
+        env.events().publish(
+            ("campaign", "contributed"),
+            (contributor.clone(), effective_amount),
+        );
 
         // Update referral tally if referral provided
         if let Some(referrer) = referral {
             if referrer != contributor {
                 let referral_key = DataKey::ReferralTally(referrer.clone());
-                let current_tally: i128 = env
-                    .storage()
-                    .persistent()
-                    .get(&referral_key)
-                    .unwrap_or(0);
-                
+                let current_tally: i128 =
+                    env.storage().persistent().get(&referral_key).unwrap_or(0);
+
                 let new_tally = current_tally
                     .checked_add(effective_amount)
                     .ok_or(ContractError::Overflow)?;
-                
-                env.storage()
-                    .persistent()
-                    .set(&referral_key, &new_tally);
+
+                env.storage().persistent().set(&referral_key, &new_tally);
                 env.storage()
                     .persistent()
                     .extend_ttl(&referral_key, 100, 100);
 
                 // Emit referral event
-                env.events()
-                    .publish(("campaign", "referral"), (referrer, contributor, effective_amount));
+                env.events().publish(
+                    ("campaign", "referral"),
+                    (referrer, contributor, effective_amount),
+                );
             }
         }
 
