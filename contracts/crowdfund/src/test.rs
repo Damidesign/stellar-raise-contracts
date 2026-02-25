@@ -924,3 +924,87 @@ fn test_set_verified_rejects_non_admin() {
 
     client.set_verified(&non_admin, &creator, &true);
 }
+
+// ── Verified Creator Badge Tests ───────────────────────────────────────────
+
+#[test]
+fn test_set_verified_sets_status_true() {
+    let (env, client, platform_admin, creator, token_address, _token_admin) = setup_env();
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+    client.initialize(&platform_admin, &creator, &token_address, &goal, &deadline, &min_contribution);
+    assert_eq!(client.is_verified(&creator), false);
+    client.set_verified(&platform_admin, &creator, &true);
+    assert_eq!(client.is_verified(&creator), true);
+}
+
+#[test]
+fn test_set_verified_toggles_status_to_false() {
+    let (env, client, platform_admin, creator, token_address, _token_admin) = setup_env();
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+    client.initialize(&platform_admin, &creator, &token_address, &goal, &deadline, &min_contribution);
+    client.set_verified(&platform_admin, &creator, &true);
+    assert_eq!(client.is_verified(&creator), true);
+    client.set_verified(&platform_admin, &creator, &false);
+    assert_eq!(client.is_verified(&creator), false);
+}
+
+#[test]
+fn test_is_verified_returns_false_for_unverified_creator() {
+    let (env, client, platform_admin, creator, token_address, _token_admin) = setup_env();
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+    client.initialize(&platform_admin, &creator, &token_address, &goal, &deadline, &min_contribution);
+    let unverified_creator = Address::generate(&env);
+    assert_eq!(client.is_verified(&unverified_creator), false);
+}
+
+#[test]
+fn test_campaign_info_includes_verified_status() {
+    let (env, client, platform_admin, creator, token_address, _token_admin) = setup_env();
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+    client.initialize(&platform_admin, &creator, &token_address, &goal, &deadline, &min_contribution);
+    let info = client.campaign_info();
+    assert_eq!(info.verified, false);
+    assert_eq!(info.creator, creator);
+    client.set_verified(&platform_admin, &creator, &true);
+    let info_after = client.campaign_info();
+    assert_eq!(info_after.verified, true);
+}
+
+#[test]
+#[should_panic(expected = "only platform admin can set verified status")]
+fn test_set_verified_rejects_non_admin() {
+    let env = Env::default();
+    let contract_id = env.register(CrowdfundContract, ());
+    let client = CrowdfundContractClient::new(&env, &contract_id);
+    let token_admin = Address::generate(&env);
+    let token_contract_id = env.register_stellar_asset_contract_v2(token_admin.clone());
+    let token_address = token_contract_id.address();
+    let platform_admin = Address::generate(&env);
+    let creator = Address::generate(&env);
+    let non_admin = Address::generate(&env);
+    env.mock_all_auths();
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+    client.initialize(&platform_admin, &creator, &token_address, &goal, &deadline, &min_contribution);
+    env.mock_all_auths_allowing_non_root_auth();
+    env.set_auths(&[]);
+    client.mock_auths(&[soroban_sdk::testutils::MockAuth {
+        address: &non_admin,
+        invoke: &soroban_sdk::testutils::MockAuthInvoke {
+            contract: &contract_id,
+            fn_name: "set_verified",
+            args: soroban_sdk::vec![&env, non_admin.clone(), creator.clone(), true],
+            sub_invokes: &[],
+        },
+    }]);
+    client.set_verified(&non_admin, &creator, &true);
+}
