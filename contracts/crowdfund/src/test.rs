@@ -132,7 +132,7 @@ fn test_contribute() {
     let contributor = Address::generate(&env);
     mint_to(&env, &token_address, &admin, &contributor, 500_000);
 
-    client.contribute(&contributor, &500_000);
+    client.contribute(&contributor, &500_000, &None);
 
     assert_eq!(client.total_raised(), 500_000);
     assert_eq!(client.contribution(&contributor), 500_000);
@@ -152,12 +152,12 @@ fn test_multiple_contributions() {
     mint_to(&env, &token_address, &admin, &alice, 600_000);
     mint_to(&env, &token_address, &admin, &bob, 400_000);
 
-    client.contribute(&alice, &600_000);
-    client.contribute(&bob, &400_000);
+    client.contribute(&alice, &300_000, None);
+    client.contribute(&bob, &200_000, None);
 
-    assert_eq!(client.total_raised(), 1_000_000);
-    assert_eq!(client.contribution(&alice), 600_000);
-    assert_eq!(client.contribution(&bob), 400_000);
+    assert_eq!(client.total_raised(), 500_000);
+    assert_eq!(client.contribution(&alice), 300_000);
+    assert_eq!(client.contribution(&bob), 200_000);
 }
 
 #[test]
@@ -195,7 +195,7 @@ fn test_withdraw_after_goal_met() {
 
     let contributor = Address::generate(&env);
     mint_to(&env, &token_address, &admin, &contributor, 1_000_000);
-    client.contribute(&contributor, &1_000_000);
+    client.contribute(&contributor, &1_000_000, &None);
 
     assert_eq!(client.total_raised(), goal);
 
@@ -223,7 +223,7 @@ fn test_withdraw_before_deadline_panics() {
 
     let contributor = Address::generate(&env);
     mint_to(&env, &token_address, &admin, &contributor, 1_000_000);
-    client.contribute(&contributor, &1_000_000);
+    client.contribute(&contributor, &1_000_000, &None);
 
     let result = client.try_withdraw();
 
@@ -245,7 +245,7 @@ fn test_withdraw_goal_not_reached_panics() {
 
     let contributor = Address::generate(&env);
     mint_to(&env, &token_address, &admin, &contributor, 500_000);
-    client.contribute(&contributor, &500_000);
+    client.contribute(&contributor, &500_000, &None);
 
     // Move past deadline, but goal not met.
     env.ledger().set_timestamp(deadline + 1);
@@ -273,8 +273,8 @@ fn test_refund_single_when_goal_not_met() {
     mint_to(&env, &token_address, &admin, &alice, 300_000);
     mint_to(&env, &token_address, &admin, &bob, 200_000);
 
-    client.contribute(&alice, &300_000);
-    client.contribute(&bob, &200_000);
+    client.contribute(&alice, &300_000, None);
+    client.contribute(&bob, &200_000, None);
 
     // Move past deadline — goal not met.
     env.ledger().set_timestamp(deadline + 1);
@@ -300,7 +300,7 @@ fn test_refund_when_goal_reached_panics() {
 
     let contributor = Address::generate(&env);
     mint_to(&env, &token_address, &admin, &contributor, 1_000_000);
-    client.contribute(&contributor, &1_000_000);
+    client.contribute(&contributor, &1_000_000, &None);
 
     env.ledger().set_timestamp(deadline + 1);
 
@@ -395,7 +395,7 @@ fn test_bug_condition_exploration_all_error_conditions_panic() {
         
         let contributor = Address::generate(&env);
         mint_to(&env, &token_address, &admin, &contributor, 1_000_000);
-        client.contribute(&contributor, &1_000_000);
+        client.contribute(&contributor, &1_000_000, &None);
 
         let result = client.try_withdraw();
 
@@ -415,7 +415,7 @@ fn test_bug_condition_exploration_all_error_conditions_panic() {
         
         let contributor = Address::generate(&env);
         mint_to(&env, &token_address, &admin, &contributor, 500_000);
-        client.contribute(&contributor, &500_000);
+        client.contribute(&contributor, &500_000, &None);
 
         env.ledger().set_timestamp(deadline + 1);
         let result = client.try_withdraw();
@@ -453,7 +453,7 @@ fn test_bug_condition_exploration_all_error_conditions_panic() {
         
         let contributor = Address::generate(&env);
         mint_to(&env, &token_address, &admin, &contributor, 1_000_000);
-        client.contribute(&contributor, &1_000_000);
+        client.contribute(&contributor, &1_000_000, &None);
 
         env.ledger().set_timestamp(deadline + 1);
         let result = client.try_refund_single(&contributor);
@@ -714,8 +714,8 @@ proptest! {
 
         client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &default_title(&env), &default_description(&env), &None);
 
-    client.contribute(&alice, &300_000);
-    client.contribute(&bob, &200_000);
+    client.contribute(&alice, &300_000, None);
+    client.contribute(&bob, &200_000, None);
 
         // Test 3.2: Valid contribution before deadline works correctly
         client.contribute(&contributor, &contribution_amount);
@@ -742,7 +742,7 @@ proptest! {
         // Move past deadline
         env.ledger().set_timestamp(deadline + 1);
 
-    client.contribute(&contributor, &10_000);
+    client.contribute(&contributor, &10_000, None);
 
     assert_eq!(client.total_raised(), 10_000);
     assert_eq!(client.contribution(&contributor), 10_000);
@@ -761,7 +761,7 @@ proptest! {
         // Ensure contribution is less than goal
         let contribution = contribution_amount.min(goal - 1);
 
-    client.contribute(&contributor, &50_000);
+    client.contribute(&contributor, &50_000, &None);
 
         let contributor = Address::generate(&env);
         mint_to(&env, &token_address, &admin, &contributor, contribution);
@@ -854,7 +854,7 @@ fn test_double_withdraw_panics() {
 
     let contributor = Address::generate(&env);
     mint_to(&env, &token_address, &admin, &contributor, 50_000);
-    client.contribute(&contributor, &50_000);
+    client.contribute(&contributor, &50_000, &None);
 
     let tier = client.get_user_tier(&contributor);
     assert!(tier.is_some());
@@ -879,7 +879,7 @@ fn test_get_user_tier_gold_level() {
 
     let contributor = Address::generate(&env);
     mint_to(&env, &token_address, &admin, &contributor, 600_000);
-    client.contribute(&contributor, &600_000);
+    client.contribute(&contributor, &600_000, &None);
 
     let tier = client.get_user_tier(&contributor);
     assert!(tier.is_some());
@@ -922,7 +922,7 @@ fn test_get_user_tier_no_tiers_defined_returns_none() {
 
     let contributor = Address::generate(&env);
     mint_to(&env, &token_address, &admin, &contributor, 500_000);
-    client.contribute(&contributor, &500_000);
+    client.contribute(&contributor, &500_000, &None);
 
     let tier = client.get_user_tier(&contributor);
     assert!(tier.is_none());
@@ -954,7 +954,7 @@ fn test_get_user_tier_highest_qualifying_tier_returned() {
 
     let contributor = Address::generate(&env);
     mint_to(&env, &token_address, &admin, &contributor, 1_000_000);
-    client.contribute(&contributor, &1_000_000);
+    client.contribute(&contributor, &1_000_000, &None);
 
     let tier = client.get_user_tier(&contributor);
     assert!(tier.is_some());
@@ -1837,7 +1837,7 @@ fn test_full_withdrawal_removes_contributor() {
 
     let contributor = Address::generate(&env);
     mint_to(&env, &token_address, &admin, &contributor, 500_000);
-    client.contribute(&contributor, &500_000);
+    client.contribute(&contributor, &500_000, &None);
 
     let stats = client.get_stats();
     assert_eq!(stats.contributor_count, 1);
