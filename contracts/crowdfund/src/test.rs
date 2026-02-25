@@ -94,8 +94,8 @@ fn test_withdraw_mints_nft_for_each_contributor() {
     token_admin_client.mint(&alice, &600_000);
     token_admin_client.mint(&bob, &400_000);
 
-    client.contribute(&alice, &600_000);
-    client.contribute(&bob, &400_000);
+    client.contribute(&alice, &300_000, None);
+    client.contribute(&bob, &200_000, None);
 
     env.ledger().set_timestamp(deadline + 1);
     client.withdraw();
@@ -217,4 +217,64 @@ fn test_contribute_after_deadline_returns_error() {
 
     let result = client.try_contribute(&contributor, &500_000);
     assert_eq!(result.unwrap_err().unwrap(), ContractError::CampaignEnded);
+}
+
+// ── Contributor Count Tests ────────────────────────────────────────────────
+
+#[test]
+fn test_contributor_count_zero_before_contributions() {
+    let (env, client, creator, token_address, _admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+
+    client.initialize(&creator, &token_address, &goal, &(goal * 2), &deadline, &min_contribution, &None);
+
+    assert_eq!(client.contributor_count(), 0);
+}
+
+#[test]
+fn test_contributor_count_one_after_single_contribution() {
+    let (env, client, creator, token_address, admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+
+    client.initialize(&creator, &token_address, &goal, &(goal * 2), &deadline, &min_contribution, &None);
+
+    let contributor = Address::generate(&env);
+    mint_to(&env, &token_address, &admin, &contributor, 500_000);
+    client.contribute(&contributor, &500_000);
+
+    assert_eq!(client.contributor_count(), 1);
+}
+
+#[test]
+fn test_contributor_count_multiple_contributors() {
+    let (env, client, creator, token_address, admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+
+    client.initialize(&creator, &token_address, &goal, &(goal * 2), &deadline, &min_contribution, &None);
+
+    let alice = Address::generate(&env);
+    let bob = Address::generate(&env);
+    let charlie = Address::generate(&env);
+    
+    mint_to(&env, &token_address, &admin, &alice, 300_000);
+    mint_to(&env, &token_address, &admin, &bob, 200_000);
+    mint_to(&env, &token_address, &admin, &charlie, 100_000);
+
+    client.contribute(&alice, &300_000);
+    assert_eq!(client.contributor_count(), 1);
+
+    client.contribute(&bob, &200_000);
+    assert_eq!(client.contributor_count(), 2);
+
+    client.contribute(&charlie, &100_000);
+    assert_eq!(client.contributor_count(), 3);
 }
