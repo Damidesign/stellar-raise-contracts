@@ -37,6 +37,23 @@ pub enum DataKey {
     Status,
     /// Minimum contribution amount.
     MinContribution,
+    /// Platform administrator address.
+    PlatformAdmin,
+    /// Verified status for a creator address.
+    Verified(Address),
+}
+
+#[derive(Clone, PartialEq)]
+#[contracttype]
+pub struct CampaignInfo {
+    pub creator: Address,
+    pub token: Address,
+    pub goal: i128,
+    pub deadline: u64,
+    pub total_raised: i128,
+    pub min_contribution: i128,
+    pub status: Status,
+    pub verified: bool,
 }
 
 // ── Contract ────────────────────────────────────────────────────────────────
@@ -49,6 +66,7 @@ impl CrowdfundContract {
     /// Initializes a new crowdfunding campaign.
     ///
     /// # Arguments
+    /// * `admin`            – The platform administrator's address.
     /// * `creator`          – The campaign creator's address.
     /// * `token`            – The token contract address used for contributions.
     /// * `goal`             – The funding goal (in the token's smallest unit).
@@ -56,6 +74,7 @@ impl CrowdfundContract {
     /// * `min_contribution` – The minimum contribution amount.
     pub fn initialize(
         env: Env,
+        admin: Address,
         creator: Address,
         token: Address,
         goal: i128,
@@ -69,17 +88,9 @@ impl CrowdfundContract {
 
         creator.require_auth();
 
+        env.storage().instance().set(&DataKey::PlatformAdmin, &admin);
         env.storage().instance().set(&DataKey::Creator, &creator);
         env.storage().instance().set(&DataKey::Token, &token);
-
-        /// Returns the list of all contributor addresses.
-        pub fn contributors(env: Env) -> Vec<Address> {
-            env.storage()
-                .instance()
-                .get(&DataKey::Contributors)
-                .unwrap_or(Vec::new(&env))
-        }
-
         env.storage().instance().set(&DataKey::Goal, &goal);
         env.storage().instance().set(&DataKey::Deadline, &deadline);
         env.storage().instance().set(&DataKey::MinContribution, &min_contribution);
@@ -276,6 +287,56 @@ impl CrowdfundContract {
         env.storage().instance().set(&DataKey::Status, &Status::Cancelled);
     }
 
+    // ── Verification Management ─────────────────────────────────────────
+
+    /// Set the verified status for a creator address.
+    /// Only callable by the platform admin.
+    ///
+    /// # Arguments
+    /// * `admin`   – The platform admin address (must match stored admin).
+    /// * `creator` – The creator address to verify/unverify.
+    /// * `status`  – True to verify, false to unverify.
+    pub fn set_verified(env: Env, admin: Address, creator: Address, status: bool) {
+        admin.require_auth();
+
+        let platform_admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::PlatformAdmin)
+            .unwrap();
+
+        if admin != platform_admin {
+            panic!("only platform admin can set verified status");
+        }
+
+        env.storage()
+            .instance()
+            .set(&DataKey::Verified(creator.clone()), &status);
+
+        // Emit events for verification status changes
+        if status {
+            env.events()
+                .publish(("platform", "creator_verified"), creator);
+        } else {
+            env.events()
+                .publish(("platform", "creator_unverified"), creator);
+        }
+    }
+
+    /// Check if a creator address is verified.
+    ///
+    /// # Arguments
+    /// * `creator` – The creator address to check.
+    ///
+    /// # Returns
+    /// True if the creator is verified, false otherwise.
+    pub fn is_verified(env: Env, creator: Address) -> bool {
+        env.storage()
+            .instance()
+            .get(&DataKey::Verified(creator))
+            .unwrap_or(false)
+    }
+
     // ── View helpers ────────────────────────────────────────────────────
 
     /// Returns the total amount raised so far.
@@ -320,6 +381,31 @@ impl CrowdfundContract {
             .instance()
             .get(&DataKey::Contributors)
             .unwrap_or(Vec::new(&env))
+    }
+
+    /// Returns comprehensive campaign information including verification status.
+    pub fn campaign_info(env: Env) -> CampaignInfo {
+        let creator: Address = env.storage().instance().get(&DataKey::Creator).unwrap();
+        let verified = Self::is_verified(env.clone(), creator.clone());
+
+        CampaignInfo {
+            creator: creator.clone(),
+            token: env.storage().instance().get(&DataKey::Token).unwrap(),
+            goal: env.storage().instance().get(&DataKey::Goal).unwrap(),
+            deadline: env.storage().instance().get(&DataKey::Deadline).unwrap(),
+            total_raised: env
+                .storage()
+                .instance()
+                .get(&DataKey::TotalRaised)
+                .unwrap_or(0),
+            min_contribution: env
+                .storage()
+                .instance()
+                .get(&DataKey::MinContribution)
+                .unwrap(),
+            status: env.storage().instance().get(&DataKey::Status).unwrap(),
+            verified,
+        }
     }
 
 }
