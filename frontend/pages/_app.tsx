@@ -1,4 +1,5 @@
-﻿import SEO from "../components/SEO";
+﻿import "../styles/global.css";
+import SEO from "../components/SEO";
 
 function MyApp({ Component, pageProps }) {
   return (
