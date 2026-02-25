@@ -146,6 +146,10 @@ pub enum DataKey {
     TotalPledged,
     /// List of stretch goal milestones.
     StretchGoals,
+    /// Whether whitelist is enabled for this campaign.
+    WhitelistEnabled,
+    /// Individual whitelist status by address.
+    Whitelist(Address),
 }
 
 // ── Rate Limiting ──────────────────────────────────────────────────────────
@@ -211,16 +215,6 @@ impl CrowdfundContract {
         if env.storage().instance().has(&DataKey::Creator) {
             return Err(ContractError::AlreadyInitialized);
         }
-
-        let eb_deadline = match early_bird_deadline {
-            Some(eb) => {
-                if eb >= deadline {
-                    panic!("early bird deadline must be before campaign deadline");
-                }
-                eb
-            }
-            None => core::cmp::min(env.ledger().timestamp() + 86400, deadline.saturating_sub(1)),
-        };
 
         creator.require_auth();
 
