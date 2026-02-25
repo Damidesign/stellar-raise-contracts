@@ -13,3 +13,6 @@ Thumbs.db
 
 # Soroban
 *.d
+.kiro/
+
+contracts/*/test_snapshots/
